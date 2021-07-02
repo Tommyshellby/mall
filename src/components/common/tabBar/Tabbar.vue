@@ -24,5 +24,6 @@
 		bottom: 0;
 		display: flex;
     box-shadow: 0px -1px 7px 0px gray;
+    margin: 0 auto;
 	}
 </style>

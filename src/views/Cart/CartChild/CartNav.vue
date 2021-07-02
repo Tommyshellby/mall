@@ -26,7 +26,13 @@
   .cart_nav{
     background-color: #FF69B4;
     font-size: 0.8rem;
-    color: white
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: 15rem;
   }
 
 </style>

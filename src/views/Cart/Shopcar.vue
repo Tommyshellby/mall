@@ -1,8 +1,7 @@
 <template>
 	<div class="cart">
     <cart-nav></cart-nav>
-    <div v-if="$store.state.cartList.length===0" class="go_shop">购物车为空，去商场逛逛吧....</div>
-    <cart-scroll class="scroll" ref="scroll" v-else>
+    <cart-scroll class="scroll" ref="scroll">
       <cart-list class="cart_list"></cart-list>
     </cart-scroll>
     <cart-bottom-bar></cart-bottom-bar>
@@ -47,10 +46,7 @@
     overflow: hidden;
   }
   .go_shop{
-    position: fixed;
-    top: 30%;
-    left: 50%;
-    transform: translateX(-50%);
     width: 90%;
+    margin: 0 auto;
   }
 </style>

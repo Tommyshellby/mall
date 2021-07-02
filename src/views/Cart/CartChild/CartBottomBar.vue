@@ -24,7 +24,7 @@
     computed:{
       total(){
         let sum = 0
-        this.$store.state.cartList.forEach((item,index)=>{
+        this.$store.state.cartList.forEach((item)=>{
           if(item.selected){
             sum += item.price*item.counter
           }
@@ -35,15 +35,15 @@
         if(this.$store.state.cartList.length===0){
           return false
         }
-        return this.$store.state.cartList.every((item,index,array)=>item.selected)
+        return this.$store.state.cartList.every((item)=>item.selected)
       },
       checkLength(){
-        return this.$store.state.cartList.filter((item,index)=>item.selected).length
+        return this.$store.state.cartList.filter((item)=>item.selected).length
       }
     },
     methods:{
       totalClick(){
-        this.$store.state.cartList.forEach((item,index)=>item.selected = this.isAll)
+        this.$store.state.cartList.forEach((item)=>item.selected = this.isAll)
         this.isAll = !this.isAll
       },
       toBuy(){

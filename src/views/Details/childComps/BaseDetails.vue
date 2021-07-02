@@ -11,10 +11,10 @@
     <div class="info_status">
       <p>{{detailData.sells}}</p>
       <p>{{detailData.fans}}</p>
-      <p v-for="(item,index) in detailData.services" v-if="index == 0">{{detailData.services[0].name}}</p>
+      <p v-for="(item,index) in detailData.services" v-if="index == 0" :key='index'>{{detailData.services[0].name}}</p>
     </div>
     <div class="info_service">
-      <p v-for="(item,index) in detailData.services" v-if="index==2||index==3">
+      <p v-for="(item,index) in detailData.services" v-if="index==2||index==3" :key='index'>
         <img :src="item.icon" alt="">
         <span>{{item.name}}</span>
       </p>
