@@ -674,9 +674,7 @@
         const out = -item.amount * 46;
         let add = 0;
         listData.forEach((itm) => {
-          if (itm.number !== item.number) {
-            add += itm.amount;
-          }
+          add += itm.amount;
         })
         item.risk = out + add;
       })
