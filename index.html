@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据分析</title>
+</head>
+<style>
+  body {
+    font-size: 15px;
+    margin: 0;
+    width: 100vw;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    height: 100vh;
+  }
+  table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 18px;
+      text-align: left;
+      background-color: #f9f9f9; /* 更改表格背景颜色 */
+  }
+  th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+  }
+  th {
+      background-color: #e2e2e2; /* 更改表头背景颜色 */
+  }
+  tr:hover {
+      background-color: #d4edda; /* 更改表格行悬停时的背景颜色 */
+  }
+  .button-container {
+      display: flex;
+      align-items: center;
+  }
+  button {
+      height: 50px;
+      margin: 10px 0;
+      margin-right: 16px; /* 添加按钮之间的间隔 */
+      padding: 0 24px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+  }
+  button:hover {
+      background-color: #0056b3;
+  }
+  .last-button {
+      margin-right: 0; /* 确保最后一个按钮没有右边距 */
+  }
+  #totalAmount {
+    margin-left: 12px;
+  }
+</style>
+<body>
+  <div style="display: flex;height: 100%;">
+    <div style="flex: 1; height: 100%;overflow-y: scroll;">
+      <textarea id="inputText" style="width: 100%; padding: 12px;box-sizing: border-box;" placeholder="请输入下注数据"></textarea>
+      <div id="recordTip"></div>
+      <div class="button-container">
+        <button onclick="generateTable()">统计</button>
+        <button onclick="recordNew()">录入新数据</button>
+        <button class="last-button" onClick="clearTable()">清空当前表格数据</button>
+
+        <div id="totalAmount">合计：</div>
+      </div>
+      <table>
+          <thead>
+              <tr>
+                  <th>number</th>
+                  <th>amount</th>
+                  <th>risk</th>
+                  <th>--</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+              </tr>
+          </tbody>
+      </table>
+    </div>
+
+    <div style="flex: 25% 0 0;margin-left: 24px;">
+      <!-- <div style="padding: 12px;background-color: #d4edda;">
+        <div>复制时注意事项</div>
+        <div>
+          1. 每一注单需单独占据一行，两注不同单之间需要换行. 举例说明：
+          <div>
+            <div style="color: red">错误的：鸡牛兔虎猴狗各数3米，03,04,05,08,09,10,15,16,17,20,21,22各2米</div>
+            <div style="display: flex;color: green;">
+              <div>正确的：</div>
+              <div>
+                <div>鸡牛兔虎猴狗各数3米，</div>
+                <div>03,04,05,08,09,10,15,16,17,20,21,22各2米</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          2. 当无法识别下注内容时，会给予相应提示，确认正确格式后，进行手动更改
+        </div>
+      </div> -->
+       <!-- 显示统计记录 -->
+      <div>统计记录：</div>
+      <textarea id="recordShow" style="width: 100%; padding: 12px;box-sizing: border-box;"></textarea>
+    </div>
+  </div>
+  <script>
+
+    // 深拷贝方法
+    function cloneDeep(target, isUseJSON = false) {
+        if (isUseJSON) {
+            return JSON.parse(JSON.stringify(target))
+        }
+
+        if (target instanceof Date) {
+            return new Date(target)
+        }
+
+        if (target instanceof RegExp) {
+            return new RegExp(target)
+        }
+
+        if (typeof target === 'object' && target !== null) {
+            const newObj = target instanceof Array ? [] : {}
+            for(let key in target) {
+                newObj[key] = cloneDeep(target[key])
+            }
+            return newObj
+        } else {
+            return target
+        }
+    }
+
+    function checkHasChineseNumber(str) {
+      const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '百', '千', '万'];
+      for (const num of chineseNumbers) {
+        if (str.includes(num)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function chineseToArabic(chinese) {
+      const digits = {
+        '零': 0, '一': 1, '二': 2, '三': 3, '四': 4,
+        '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
+        '两': 2, '十': 10, '百': 100, '千': 1000,
+        '万': 10000, '亿': 100000000
+      };
+
+      let total = 0;
+      let stack = 0;
+      let pending = 0;
+      let lastUnit = Infinity;
+
+      const processStack = () => {
+        total += stack + pending;
+        stack = pending = 0;
+      };
+
+      for (const char of chinese) {
+        const value = digits[char];
+
+        if (value === undefined) continue; // 忽略无效字符
+
+        if (value >= 10) { // 处理单位
+          if ([100000000, 10000].includes(value)) { // 处理亿和万
+            processStack();
+            total *= value;
+            lastUnit = value;
+          } else { // 处理十、百、千
+            if (value > lastUnit) { // 处理更高单位时先结算
+              processStack();
+            }
+            stack += (pending || 1) * value;
+            pending = 0;
+            lastUnit = value;
+          }
+        } else { // 处理数字
+          pending = pending * 10 + value;
+        }
+      }
+
+      return total + stack + pending;
+    }
+
+    // 目前支持的类型：各 每 = 买
+    const checkSplitType = (str) => {
+      if (str.includes('各')) {
+        return '各';
+      } else if (str.includes('每')) {
+        return '每';
+      } else if (str.includes('=')) {
+        return '=';
+      } else if (str.includes('买')) {
+        return '买';
+      } else {
+        return ''
+      }
+    }
+
+
+    const greenCode = [6,5,17,16,28,27,39,38,49,11,22,21,33,32,44,43];
+    const redCode = [18,30,29,40,2,1,12,13,24,23,35,34,46,45,8,7,19];
+    const blueCode = [42,41,4,3,15,14,26,25,37,36,48,47,10,9,20,31];
+
+    let preListData = [];
+    let listData = [];
+    let isRecord = false;
+    let recordTime = '';
+    let contentList = '';
+
+    // 十二生肖
+    const zodiac = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+    const zodiacMap = {
+      '鼠': [6,18,30,42],
+      '牛': [5,17,29,41],
+      '虎': [4,16,28,40],
+      '兔': [3,15,27,39],
+      '龙': [2,14,26,38],
+      '蛇': [1,13,25,37,49],
+      '马': [12,24,36,48],
+      '羊': [11,23,35,47],
+      '猴': [10,22,34,46],
+      '鸡': [9,21,33,45],
+      '狗': [8,20,32,44],
+      '猪': [7,19,31,43],
+    }
+
+    // 使用正则表达式匹配所有整数
+    function findNonNegativeIntegers(text) {
+      const regex = /\d+/g;
+      const matches = text.match(regex);
+      return matches || [];
+    }
+
+    // 负数转正数
+    function negativeToPositive(number) {
+      return number < 0 ? number * -1 : number;
+    }
+
+    function getTextareaContent() {
+      const textarea = document.getElementById('inputText');
+      const content = textarea.value;
+      return content;
+    }
+
+    /** 生成表格数据 */
+    function generateTable() {
+      if (isRecord) {
+        alert('该数据已经统计过了，请勿重复统计');
+        return;
+      }
+      // 备份数据
+      let preListData = cloneDeep(listData);
+
+      const content = getTextareaContent();
+
+      if (!content) {
+        alert('请输入内容');
+        return
+      }
+
+      // 匹配所有换行符
+      const matches = content.match(/\r?\n/g);
+      let lines = content.split(/\r?\n/g);
+
+      lines = lines.filter((itm) => itm);
+
+      console.log(lines, 'lines');
+
+      for(let i = 0; i < lines.length; i++) {
+        const item = lines[i];
+
+        const splitType = checkSplitType(item);
+
+        console.log(splitType, 'splitType')
+
+        // 情况1：生肖
+        if(zodiac.some((itm) => item.includes(itm))) {
+
+          let amount = 0;
+          if (splitType) {
+            const splitList = item.split(splitType);
+            const splitListLength = splitList.length;
+            amount = findNonNegativeIntegers(splitList[splitListLength - 1])[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(splitList[splitListLength - 1])) {
+                amount = chineseToArabic(splitList[splitListLength - 1]);
+              } else {
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          } else {
+            amount = findNonNegativeIntegers(item)[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(item)) {
+                amount = chineseToArabic(item);
+              } else {
+                listData = cloneDeep(preListData);
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          }
+
+          zodiac.forEach((z) => {
+            if (item.includes(z)) {
+              zodiacMap[z].forEach((itm) => {
+                if (listData.find(i => i.number === itm)) {
+                  console.log('存在重复');
+                  const i = listData.find(i => i.number === itm);
+                  i.amount += Number(amount);
+                } else {
+                  let color = '';
+                  if (greenCode.includes(itm)) {
+                    color = 'green';
+                  } else if (redCode.includes(itm)) {
+                    color = 'red';
+                  } else if (blueCode.includes(itm)) {
+                    color = 'blue';
+                  }
+                  listData.push({
+                    number: itm,
+                    color,
+                    zodiac: z,
+                    amount: Number(amount),
+                    risk: '',
+                   eat: ''
+                  })
+                }
+              });
+            }
+          });
+          continue;
+        }
+
+        // 情况2 颜色 红绿蓝
+        if (['红', '绿', '蓝'].some((itm) => item.includes(itm))) {
+          let amount = 0;
+          if (splitType) {
+            const splitList = item.split(splitType);
+            const splitListLength = splitList.length;
+            amount = findNonNegativeIntegers(splitList[splitListLength - 1])[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(splitList[splitListLength - 1])) {
+                amount = chineseToArabic(splitList[splitListLength - 1]);
+              } else {
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          } else {
+            amount = findNonNegativeIntegers(item)[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(item)) {
+                amount = chineseToArabic(item);
+              } else {
+                listData = cloneDeep(preListData);
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          }
+
+          if(item.includes('单') || item.includes('双')) {
+            if (item.includes('单') && item.includes('双')) {
+              alert(`无法识别第${i + 1}注内容：${item}`);
+              return;
+            } else {
+              const map = {
+                '红': redCode,
+                '绿': greenCode,
+                '蓝': blueCode,
+              };
+              ['红', '绿', '蓝'].forEach((color) => {
+                if (item.includes(color)) {
+                  map[color].forEach((itm) => {
+                    if (item.includes('单') && itm % 2 === 0) {
+                      return;
+                    } else if (item.includes('双') && itm % 2 !== 0) {
+                      return;
+                    }
+                    if (listData.find(i => Number(i.number) === itm)) {
+                      const i = listData.find(i => Number(i.number) === itm);
+                      i.amount += Number(amount);
+                    } else {
+                      let zodiac = '';
+                      const zodiacKeys = Object.keys(zodiacMap);
+                      zodiacKeys.forEach((key) => {
+                        if (zodiacMap[key].includes(itm)) {
+                          zodiac = key;
+                        }
+                      });
+                      listData.push({
+                        number: itm,
+                        color: color === '红' ? 'red' : color === '绿' ? 'green' : 'blue',
+                        zodiac,
+                        amount: Number(amount),
+                        risk: '',
+                        eat: ''
+                      })
+                    }
+                  });
+                }
+              })
+            }
+          } else {
+            const map = {
+              '红': redCode,
+              '绿': greenCode,
+              '蓝': blueCode,
+            };
+            ['红', '绿', '蓝'].forEach((color) => {
+              if (item.includes(color)) {
+                map[color].forEach((itm) => {
+                  if (listData.find(i => Number(i.number) === itm)) {
+                    const i = listData.find(i => Number(i.number) === itm);
+                    i.amount += Number(amount);
+                  } else {
+                    let zodiac = '';
+                    const zodiacKeys = Object.keys(zodiacMap);
+                    zodiacKeys.forEach((key) => {
+                      if (zodiacMap[key].includes(itm)) {
+                        zodiac = key;
+                      }
+                    });
+                    listData.push({
+                      number: itm,
+                      color: color === '红' ? 'red' : color === '绿' ? 'green' : 'blue',
+                      zodiac,
+                      amount: Number(amount),
+                      risk: '',
+                      eat: ''
+                    })
+                  }
+                });
+              }
+            })
+          }
+          continue
+        }
+
+        // 情况3 单双
+        if (['单', '双'].some((itm) => item.includes(itm))) {
+          let amount = 0;
+          if (splitType) {
+            const splitList = item.split(splitType);
+            const splitListLength = splitList.length;
+            amount = findNonNegativeIntegers(splitList[splitListLength - 1])[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(splitList[splitListLength - 1])) {
+                amount = chineseToArabic(splitList[splitListLength - 1]);
+              } else {
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          } else {
+            amount = findNonNegativeIntegers(item)[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(item)) {
+                amount = chineseToArabic(item);
+              } else {
+                listData = cloneDeep(preListData);
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          }
+
+          for(let itm = 1; itm <= 49; itm++) {
+            if (item.includes('单') && item.includes('双')) {
+              // nothing
+            } else if (item.includes('单') && itm % 2 !== 1) {
+              continue
+            } else if (item.includes('双') && itm % 2 !== 0) {
+              continue
+            }
+            if (listData.find(i => Number(i.number) === itm)) {
+              const i = listData.find(i => Number(i.number) === itm);
+              i.amount += Number(amount);
+            } else {
+              let color = '';
+              if (greenCode.includes(itm)) {
+                color = 'green';
+              } else if (redCode.includes(itm)) {
+                color = 'red';
+              } else if (blueCode.includes(itm)) {
+                color = 'blue';
+              }
+              let zodiac = '';
+              const zodiacKeys = Object.keys(zodiacMap);
+              zodiacKeys.forEach((key) => {
+                if (zodiacMap[key].includes(itm)) {
+                  zodiac = key;
+                }
+              });
+              listData.push({
+                number: itm,
+                color,
+                zodiac,
+                amount: Number(amount),
+                risk: '',
+                eat: ''
+              })
+            }
+          }
+          continue
+        }
+
+        // 情况4 大小数
+        if (item.includes('小数') || item.includes('大数')) {
+          let amount = 0;
+          if (splitType) {
+            const splitList = item.split(splitType);
+            const splitListLength = splitList.length;
+            amount = findNonNegativeIntegers(splitList[splitListLength - 1])[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(splitList[splitListLength - 1])) {
+                amount = chineseToArabic(splitList[splitListLength - 1]);
+              } else {
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          } else {
+            amount = findNonNegativeIntegers(item)[0];
+            if(isNaN(amount)) {
+              if (checkHasChineseNumber(item)) {
+                amount = chineseToArabic(item);
+              } else {
+                listData = cloneDeep(preListData);
+                alert(`无法识别第${i + 1}注内容：${item}`);
+                return;
+              }
+            } else {
+              amount = negativeToPositive(amount);
+            }
+          }
+
+          const startIndex = item.includes('小数') ? 1 : 25;
+          const endIndex = item.includes('小数') ? 24 : 49;
+          for(let itm = startIndex; itm <= endIndex; itm++) {
+            if (listData.find(i => Number(i.number) === itm)) {
+              const i = listData.find(i => Number(i.number) === itm);
+              i.amount += Number(amount);
+            } else {
+              let color = '';
+              if (greenCode.includes(itm)) {
+                color = 'green';
+              } else if (redCode.includes(itm)) {
+                color = 'red';
+              } else if (blueCode.includes(itm)) {
+                color = 'blue';
+              }
+              let zodiac = '';
+              const zodiacKeys = Object.keys(zodiacMap);
+              zodiacKeys.forEach((key) => {
+                if (zodiacMap[key].includes(itm)) {
+                  zodiac = key;
+                }
+              });
+              listData.push({
+                number: itm,
+                color,
+                zodiac,
+                amount: Number(amount),
+                risk: '',
+                eat: ''
+              })
+            }
+          }
+          continue;
+        }
+
+
+        // 情况5: 23.33.33各30
+        if (splitType) {
+          const splitList = item.split(splitType);
+          const splitListLength = splitList.length;
+          const code = splitList[0];
+          console.log(splitList[splitListLength.length - 1], '==')
+          let amount = findNonNegativeIntegers(splitList[splitListLength - 1])[0];
+          if (isNaN(amount)) {
+            if (checkHasChineseNumber(splitList[splitListLength - 1])) {
+              amount = chineseToArabic(splitList[splitListLength - 1]);
+            } else {
+              listData = cloneDeep(preListData);
+              alert(`无法识别第${i + 1}注内容：${item}`);
+              return;
+            }
+          } else {
+            amount = negativeToPositive(amount);
+          }
+
+          const numbers = findNonNegativeIntegers(code).map((itm) => negativeToPositive(Number(itm)));
+
+          if (numbers.length === 0) {
+            alert(`无法识别第${i + 1}注内容：${item}`);
+            return;
+          }
+
+          numbers.forEach((itm) => {
+            itm = Number(itm);
+
+            if (listData.find(i => Number(i.number) === itm)) {
+              const i = listData.find(i => Number(i.number) === itm);
+              i.amount += Number(amount);
+            } else {
+              let color = '';
+              if (greenCode.includes(itm)) {
+                color = 'green';
+              } else if (redCode.includes(itm)) {
+                color = 'red';
+              } else if (blueCode.includes(itm)) {
+                color = 'blue';
+              }
+              let zodiac = '';
+              const zodiacKeys = Object.keys(zodiacMap);
+              zodiacKeys.forEach((key) => {
+                if (zodiacMap[key].includes(itm)) {
+                  zodiac = key;
+                }
+              });
+              listData.push({
+                number: itm,
+                color,
+                zodiac,
+                amount: Number(amount),
+                risk: '',
+                eat: ''
+              })
+            }
+          });
+          continue;
+        } else {
+          listData = cloneDeep(preListData);
+          alert(`无法识别第${i + 1}注内容：${item}`);
+          return;
+        }
+      }
+      isRecord = true;
+      contentList += content;
+      listData.forEach((item) => {
+        const out = -item.amount * 46;
+        let add = 0;
+        listData.forEach((itm) => {
+          if (itm.number !== item.number) {
+            add += itm.amount;
+          }
+        })
+        item.risk = out + add;
+      })
+
+      // 排序
+      listData.sort((a, b) => {
+        if (a.risk > b.risk) {
+          return 1;
+        } else if (a.risk < b.risk) {
+          return -1;
+        } else {
+          return 0;
+        }
+      })
+
+      console.log(listData)
+
+      // 根据 listData 数据动态生成表格行
+      updateContent(listData);
+    }
+
+    function recordNew() {
+      const textarea = document.getElementById('inputText');
+      textarea.value =  '';
+      textarea.toggleAttribute('disabled');
+      isRecord = false;
+      console.log(33)
+    }
+
+    /** 更新表格 */
+    function updateContent(listData) {
+      // 清空现有表格内容
+      const tbody = document.querySelector('table tbody');
+      tbody.innerHTML = '';
+      listData.forEach((item) => {
+        const row = document.createElement('tr');
+        const number = item.number >= 10 ? item.number : '0' + item.number;
+        // <div>${item.zodiac}</div>
+        row.innerHTML = `
+          <td style="display: flex;align-items: center;">
+            <div style="background-color: ${item.color};color:#fff;border-radius: 50%;width: 40px;height:40px;text-align:center;line-height:40px;margin-right: 12px">${number}</div>
+
+          </td>
+          <td>${item.amount}</td>
+          <td style="color: ${item.risk > 0 ? 'red' : 'green'}">${item.risk}</td>
+          <td>${item.eat}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      const recordBox = document.getElementById('recordTip');
+      recordBox.innerHTML = '数据已经统计：' + new Date().toLocaleString();
+
+      const textarea = document.getElementById('inputText');
+      textarea.setAttribute('disabled', true);
+
+      const recordShow = document.getElementById('recordShow');
+      recordShow.value =  contentList;
+      recordShow.style.height = 'auto'; // Reset height to auto first
+      recordShow.style.height = (recordShow.scrollHeight > 300 ? 300 : recordShow.scrollHeight) + 'px'; // Set height to scrollHeight
+      recordShow.setAttribute('disabled', true);
+
+      const totalAmountEl = document.getElementById('totalAmount');
+      totalAmountEl.innerHTML = '合计：' + listData.reduce((acc, curr) => acc + curr.amount, 0);
+    }
+
+    function clearTable() {
+      if (!listData.length) {
+        return;
+      }
+      if (window.confirm('确定要清空表格吗？')) {
+        const textarea = document.getElementById('inputText');
+        textarea.value = '';
+        textarea.toggleAttribute('disabled');
+        listData = [];
+        isRecord = false;
+
+        // 清空现有表格内容
+        const tbody = document.querySelector('table tbody');
+        tbody.innerHTML = '';
+
+        // ==
+        const recordBox = document.getElementById('recordTip');
+        recordBox.innerHTML = '';
+
+        // ==
+        const totalAmountEl = document.getElementById('totalAmount');
+        totalAmountEl.innerHTML = '合计：';
+
+        // ==
+        const recordShow = document.getElementById('recordShow');
+        recordShow.value =  '';
+      }
+    }
+
+    /** 实时计算输入框高度 */
+    function adjustTextareaHeight() {
+      const textarea = document.getElementById('inputText');
+      textarea.style.height = 'auto'; // Reset height to auto first
+      textarea.style.height = textarea.scrollHeight + 'px'; // Set height to scrollHeight
+    }
+    document.getElementById('inputText').addEventListener('input', adjustTextareaHeight);
+    window.onload = adjustTextareaHeight;
+  </script>
+</body>
+</html>
