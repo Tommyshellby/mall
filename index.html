@@ -67,7 +67,7 @@
       <div class="button-container">
         <button onclick="generateTable()">统计</button>
         <button onclick="recordNew()">录入新数据</button>
-        <button class="last-button" onClick="clearTable()">清空当前表格数据</button>
+        <button class="last-button" onClick="clearTable()">清空当前统计数据</button>
       </div>
       <table>
           <thead>
@@ -110,8 +110,10 @@
         </div>
       </div>
        <!-- 显示统计记录 -->
-      <div>统计记录：</div>
+      <div>已统计记录：</div>
       <textarea id="recordShow" style="width: 100%; padding: 12px;box-sizing: border-box;"></textarea>
+      <div>已过滤数据：</div>
+      <textarea id="filterBox" style="width: 100%; padding: 12px;box-sizing: border-box;"></textarea>
     </div>
   </div>
   <script>
@@ -219,7 +221,8 @@
     let listData = [];
     let isRecord = false;
     let recordTime = '';
-    let contentList = '';
+    let contentList = [];
+    let filterList = '';
 
     // 十二生肖
     const zodiac = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
@@ -283,6 +286,8 @@
       for(let i = 0; i < lines.length; i++) {
         const item = lines[i];
 
+        contentList.push(item + '\n')
+
         const splitType = checkSplitType(item);
 
         console.log(splitType, 'splitType')
@@ -299,8 +304,11 @@
               if (checkHasChineseNumber(splitList[splitListLength - 1])) {
                 amount = chineseToArabic(splitList[splitListLength - 1]);
               } else {
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                filterList += item + '\n';
+                contentList.pop();
+                continue
+                // return;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -311,9 +319,12 @@
               if (checkHasChineseNumber(item)) {
                 amount = chineseToArabic(item);
               } else {
-                listData = cloneDeep(preListData);
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // listData = cloneDeep(preListData);
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue
               }
             } else {
               amount = negativeToPositive(amount);
@@ -362,8 +373,11 @@
               if (checkHasChineseNumber(splitList[splitListLength - 1])) {
                 amount = chineseToArabic(splitList[splitListLength - 1]);
               } else {
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -374,9 +388,12 @@
               if (checkHasChineseNumber(item)) {
                 amount = chineseToArabic(item);
               } else {
-                listData = cloneDeep(preListData);
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // listData = cloneDeep(preListData);
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -385,8 +402,11 @@
 
           if(item.includes('单') || item.includes('双')) {
             if (item.includes('单') && item.includes('双')) {
-              alert(`无法识别第${i + 1}注内容：${item}`);
-              return;
+              // alert(`无法识别第${i + 1}注内容：${item}`);
+              // return;
+              filterList += item + '\n';
+              contentList.pop();
+              continue;
             } else {
               const map = {
                 '红': redCode,
@@ -472,8 +492,11 @@
               if (checkHasChineseNumber(splitList[splitListLength - 1])) {
                 amount = chineseToArabic(splitList[splitListLength - 1]);
               } else {
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -484,9 +507,12 @@
               if (checkHasChineseNumber(item)) {
                 amount = chineseToArabic(item);
               } else {
-                listData = cloneDeep(preListData);
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // listData = cloneDeep(preListData);
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -544,8 +570,11 @@
               if (checkHasChineseNumber(splitList[splitListLength - 1])) {
                 amount = chineseToArabic(splitList[splitListLength - 1]);
               } else {
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -556,9 +585,12 @@
               if (checkHasChineseNumber(item)) {
                 amount = chineseToArabic(item);
               } else {
-                listData = cloneDeep(preListData);
-                alert(`无法识别第${i + 1}注内容：${item}`);
-                return;
+                // listData = cloneDeep(preListData);
+                // alert(`无法识别第${i + 1}注内容：${item}`);
+                // return;
+                filterList += item + '\n';
+                contentList.pop();
+                continue;
               }
             } else {
               amount = negativeToPositive(amount);
@@ -612,9 +644,12 @@
             if (checkHasChineseNumber(splitList[splitListLength - 1])) {
               amount = chineseToArabic(splitList[splitListLength - 1]);
             } else {
-              listData = cloneDeep(preListData);
-              alert(`无法识别第${i + 1}注内容：${item}`);
-              return;
+              // listData = cloneDeep(preListData);
+              // alert(`无法识别第${i + 1}注内容：${item}`);
+              // return;
+              filterList += item + '\n';
+              contentList.pop();
+              continue;
             }
           } else {
             amount = negativeToPositive(amount);
@@ -623,8 +658,11 @@
           const numbers = findNonNegativeIntegers(code).map((itm) => negativeToPositive(Number(itm)));
 
           if (numbers.length === 0) {
-            alert(`无法识别第${i + 1}注内容：${item}`);
-            return;
+            // alert(`无法识别第${i + 1}注内容：${item}`);
+            // return;
+            filterList += item + '\n';
+            contentList.pop();
+            continue;
           }
 
           numbers.forEach((itm) => {
@@ -661,13 +699,15 @@
           });
           continue;
         } else {
-          listData = cloneDeep(preListData);
-          alert(`无法识别第${i + 1}注内容：${item}`);
-          return;
-        }
+          // listData = cloneDeep(preListData);
+          // alert(`无法识别第${i + 1}注内容：${item}`);
+          // return;
+          filterList += item + '\n';
+          contentList.pop();
+          continue;
+        }        
       }
       isRecord = true;
-      contentList += content + '\n';
       listData.forEach((item) => {
         const out = -item.amount * 46;
         let add = 0;
@@ -736,22 +776,31 @@
       textarea.setAttribute('disabled', true);
 
       const recordShow = document.getElementById('recordShow');
-      recordShow.value =  contentList;
+      console.log(contentList, 'contentList')
+      recordShow.value = contentList.join('');
       recordShow.style.height = 'auto'; // Reset height to auto first
       recordShow.style.height = (recordShow.scrollHeight > 300 ? 300 : recordShow.scrollHeight) + 'px'; // Set height to scrollHeight
       recordShow.setAttribute('disabled', true);
+
+      const filterBox = document.getElementById('filterBox');
+      filterBox.value = filterList;
+      filterBox.style.height = 'auto';
+      filterBox.style.height = (filterBox.scrollHeight > 300 ? 300 : filterBox.scrollHeight) + 'px';
+      filterBox.setAttribute('disabled', true);
     }
 
     function clearTable() {
-      if (!listData.length) {
-        return;
-      }
-      if (window.confirm('确定要清空表格吗？')) {
+      // if (!listData.length) {
+      //   return;
+      // }
+      if (window.confirm('确定要清空当前统计数据吗？')) {
         const textarea = document.getElementById('inputText');
         textarea.value = '';
         textarea.toggleAttribute('disabled');
         listData = [];
         isRecord = false;
+        contentList = [];
+        filterList = '';
 
         // 清空现有表格内容
         const tbody = document.querySelector('table tbody');
@@ -769,6 +818,10 @@
         // ==
         const recordBox = document.getElementById('recordTip');
         recordBox.innerHTML = '';
+
+        // ==
+        const filterBox = document.getElementById('filterBox');
+        filterBox.value = '';
 
         // ==
         const recordShow = document.getElementById('recordShow');
