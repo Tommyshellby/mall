@@ -105,14 +105,11 @@
             </div>
           </div>
         </div>
-        <div>
-          2. 当无法识别下注内容时，会给予相应提示，确认正确格式后，请手动更改为正确格式
-        </div>
       </div>
        <!-- 显示统计记录 -->
       <div>已统计记录：</div>
       <textarea id="recordShow" style="width: 100%; padding: 12px;box-sizing: border-box;"></textarea>
-      <div>已过滤数据：</div>
+      <div>已过滤数据：（部分可能是有效数据，请甄别）</div>
       <textarea id="filterBox" style="width: 100%; padding: 12px;box-sizing: border-box;"></textarea>
     </div>
   </div>
@@ -194,7 +191,8 @@
         }
       }
 
-      return total + stack + pending;
+      const result = total + stack + pending;
+      return isNaN(result) ? 0 : result;
     }
 
     // 目前支持的类型：各 每 = 买
@@ -222,7 +220,7 @@
     let isRecord = false;
     let recordTime = '';
     let contentList = [];
-    let filterList = '';
+    let filterList = [];
 
     // 十二生肖
     const zodiac = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
@@ -305,7 +303,7 @@
                 amount = chineseToArabic(splitList[splitListLength - 1]);
               } else {
                 // alert(`无法识别第${i + 1}注内容：${item}`);
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue
                 // return;
@@ -322,7 +320,7 @@
                 // listData = cloneDeep(preListData);
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue
               }
@@ -375,7 +373,7 @@
               } else {
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -391,7 +389,7 @@
                 // listData = cloneDeep(preListData);
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -404,7 +402,7 @@
             if (item.includes('单') && item.includes('双')) {
               // alert(`无法识别第${i + 1}注内容：${item}`);
               // return;
-              filterList += item + '\n';
+              filterList.push(item + '\n');
               contentList.pop();
               continue;
             } else {
@@ -494,7 +492,7 @@
               } else {
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -510,7 +508,7 @@
                 // listData = cloneDeep(preListData);
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -572,7 +570,7 @@
               } else {
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -588,7 +586,7 @@
                 // listData = cloneDeep(preListData);
                 // alert(`无法识别第${i + 1}注内容：${item}`);
                 // return;
-                filterList += item + '\n';
+                filterList.push(item + '\n');
                 contentList.pop();
                 continue;
               }
@@ -647,7 +645,7 @@
               // listData = cloneDeep(preListData);
               // alert(`无法识别第${i + 1}注内容：${item}`);
               // return;
-              filterList += item + '\n';
+              filterList.push(item + '\n');
               contentList.pop();
               continue;
             }
@@ -660,7 +658,7 @@
           if (numbers.length === 0) {
             // alert(`无法识别第${i + 1}注内容：${item}`);
             // return;
-            filterList += item + '\n';
+            filterList.push(item + '\n');
             contentList.pop();
             continue;
           }
@@ -702,11 +700,107 @@
           // listData = cloneDeep(preListData);
           // alert(`无法识别第${i + 1}注内容：${item}`);
           // return;
-          filterList += item + '\n';
+          filterList.push(item + '\n');
           contentList.pop();
           continue;
         }        
       }
+
+      // 对过滤数据，重新进行兜底处理，如 
+      // 第一种情况 13-24元、34-12-56-24米、34-12斤、
+      // 第二种情况 41/12元、41/13米、41/12斤、
+      // 第三种情况 12五十元 12-五十元
+      let newFilterList = [];
+      if (filterList.length) {
+        filterList.forEach((item) => {
+          if (findNonNegativeIntegers(item).length && checkHasChineseNumber(item)) {
+            const amount = chineseToArabic(item);
+            const numbers = findNonNegativeIntegers(item);
+            if (amount) {
+              numbers.forEach((itm) => {
+                itm = Number(itm);
+
+                if (listData.find(i => Number(i.number) === itm)) {
+                  const i = listData.find(i => Number(i.number) === itm);
+                  i.amount += Number(amount);
+                } else {
+                  let color = '';
+                  if (greenCode.includes(itm)) {
+                    color = 'green';
+                  } else if (redCode.includes(itm)) {
+                    color = 'red';
+                  } else if (blueCode.includes(itm)) {
+                    color = 'blue';
+                  }
+                  let zodiac = '';
+                  const zodiacKeys = Object.keys(zodiacMap);
+                  zodiacKeys.forEach((key) => {
+                    if (zodiacMap[key].includes(itm)) {
+                      zodiac = key;
+                    }
+                  });
+                  listData.push({
+                    number: itm,
+                    color,
+                    zodiac,
+                    amount: Number(amount),
+                    risk: '',
+                    eat: ''
+                  })
+                }
+              });
+              return;
+            }
+          }
+
+          if (findNonNegativeIntegers(item).length && ['元', '米', '斤'].some((itm) => item.includes(itm))) {
+            const allNumbers = findNonNegativeIntegers(item);
+            const amount = allNumbers[allNumbers.length - 1];
+            const numbers = allNumbers.slice(0, allNumbers.length - 1);
+            if (amount) {
+              numbers.forEach((itm) => {
+                itm = Number(itm);
+
+                if (listData.find(i => Number(i.number) === itm)) {
+                  const i = listData.find(i => Number(i.number) === itm);
+                  i.amount += Number(amount);
+                } else {
+                  let color = '';
+                  if (greenCode.includes(itm)) {
+                    color = 'green';
+                  } else if (redCode.includes(itm)) {
+                    color = 'red';
+                  } else if (blueCode.includes(itm)) {
+                    color = 'blue';
+                  }
+                  let zodiac = '';
+                  const zodiacKeys = Object.keys(zodiacMap);
+                  zodiacKeys.forEach((key) => {
+                    if (zodiacMap[key].includes(itm)) {
+                      zodiac = key;
+                    }
+                  });
+                  listData.push({
+                    number: itm,
+                    color,
+                    zodiac,
+                    amount: Number(amount),
+                    risk: '',
+                    eat: ''
+                  })
+                }
+              });
+              return;
+            }
+          }
+
+          
+          newFilterList.push(item);
+        })
+      }
+
+      filterList = newFilterList;
+
       isRecord = true;
       listData.forEach((item) => {
         const out = -item.amount * 46;
@@ -783,7 +877,7 @@
       recordShow.setAttribute('disabled', true);
 
       const filterBox = document.getElementById('filterBox');
-      filterBox.value = filterList;
+      filterBox.value = filterList.join('');
       filterBox.style.height = 'auto';
       filterBox.style.height = (filterBox.scrollHeight > 300 ? 300 : filterBox.scrollHeight) + 'px';
       filterBox.setAttribute('disabled', true);
@@ -800,7 +894,7 @@
         listData = [];
         isRecord = false;
         contentList = [];
-        filterList = '';
+        filterList = [];
 
         // 清空现有表格内容
         const tbody = document.querySelector('table tbody');
